@@ -122,6 +122,20 @@ def test_ssh_open_to_world_is_high(session, scan):
     assert hits[0].evidence["ports"] == {"22": "SSH"}
 
 
+def test_ipv6_ssh_open_to_world_is_flagged(session, scan):
+    ipv6_rule = {
+        "IpProtocol": "tcp",
+        "FromPort": 22,
+        "ToPort": 22,
+        "Ipv6Ranges": [{"CidrIpv6": "::/0"}],
+    }
+    gid = open_sg(session, "v6-bastion", "ipv6 jump box", [ipv6_rule])
+    findings, _ = scan()
+    hits = by_check(findings, "AWS-EC2-002")
+    assert [f.resource_id for f in hits] == [gid]
+    assert hits[0].evidence["sources"] == ["::/0"]
+
+
 def test_port_range_covering_rdp_and_db_is_caught(session, scan):
     gid = open_sg(session, "wide", "range", [world("tcp", 1000, 4000)])
     findings, _ = scan()
