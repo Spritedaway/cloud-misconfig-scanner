@@ -1,0 +1,12 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+.pytest_cache/
+.ruff_cache/
+build/
+dist/
+
+# Scan output from real accounts can contain account IDs and resource names. Keep it local.
+reports/
+.env

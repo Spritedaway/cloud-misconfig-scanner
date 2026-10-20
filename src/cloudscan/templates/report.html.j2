@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'">
+<title>Cloud Misconfiguration Report</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --card: #ffffff; --ink: #14171c; --muted: #5d6673; --line: #e2e5ea;
+    --critical: #b42318; --high: #c4320a; --medium: #b54708; --low: #175cd3; --info: #475467;
+    --critical-bg: #fef3f2; --high-bg: #fff4ed; --medium-bg: #fffaeb; --low-bg: #eff8ff; --info-bg: #f2f4f7;
+    --ok: #067647; --warn-bg: #fffaeb; --warn-line: #fedf89;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f1115; --card: #171a21; --ink: #e8eaee; --muted: #9aa3af; --line: #2a2f39;
+      --critical: #f97066; --high: #fd853a; --medium: #fdb022; --low: #53b1fd; --info: #98a2b3;
+      --critical-bg: #2a1513; --high-bg: #2b1a10; --medium-bg: #2a2210; --low-bg: #10202f; --info-bg: #1d212a;
+      --ok: #47cd89; --warn-bg: #2a2210; --warn-line: #6b4f12;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+         font: 15px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 980px; margin: 0 auto; padding: 32px 16px 64px; }
+  h1 { font-size: 26px; margin: 0 0 4px; letter-spacing: -0.01em; }
+  h2 { font-size: 17px; margin: 0 0 12px; }
+  .meta { color: var(--muted); font-size: 13px; }
+  .meta code { font-family: var(--mono); }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+          padding: 20px; margin-top: 20px; }
+  .tiles { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-top: 20px; }
+  .tile { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px; }
+  .tile .n { font-size: 28px; font-weight: 700; line-height: 1; }
+  .tile .l { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-top: 6px; }
+  .tile.CRITICAL .n { color: var(--critical); } .tile.HIGH .n { color: var(--high); }
+  .tile.MEDIUM .n { color: var(--medium); } .tile.LOW .n { color: var(--low); } .tile.INFO .n { color: var(--info); }
+  .pill { display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: .05em;
+          padding: 2px 8px; border-radius: 999px; text-transform: uppercase; white-space: nowrap; }
+  .pill.CRITICAL { color: var(--critical); background: var(--critical-bg); }
+  .pill.HIGH { color: var(--high); background: var(--high-bg); }
+  .pill.MEDIUM { color: var(--medium); background: var(--medium-bg); }
+  .pill.LOW { color: var(--low); background: var(--low-bg); }
+  .pill.INFO, .pill.src { color: var(--info); background: var(--info-bg); }
+  .pill.ok { color: var(--ok); background: var(--info-bg); }
+  .ai-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 10px; }
+  .ai-head h2 { margin: 0; margin-right: auto; }
+  .advisory { font-size: 12px; color: var(--muted); margin-top: 12px; }
+  .warn { background: var(--warn-bg); border: 1px solid var(--warn-line); border-radius: 10px;
+          padding: 12px 14px; margin-top: 14px; font-size: 14px; }
+  ol.top { margin: 12px 0 0; padding-left: 20px; }
+  ol.top li { margin-bottom: 10px; }
+  ol.top .why { color: var(--muted); }
+  a { color: var(--low); }
+  details.f { background: var(--card); border: 1px solid var(--line); border-radius: 12px; margin-top: 10px; }
+  details.f > summary { list-style: none; cursor: pointer; padding: 14px 16px; display: grid;
+          grid-template-columns: auto 1fr auto; gap: 12px; align-items: center; }
+  details.f > summary::-webkit-details-marker { display: none; }
+  .ftitle { font-weight: 600; }
+  .fres { font-family: var(--mono); font-size: 12px; color: var(--muted); word-break: break-all; }
+  .fid { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+  .fbody { padding: 0 16px 16px; border-top: 1px solid var(--line); }
+  .fbody h3 { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 14px 0 6px; }
+  pre { background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 12px;
+        overflow-x: auto; font: 12.5px/1.5 var(--mono); margin: 0; }
+  ul.err { margin: 0; padding-left: 20px; font-family: var(--mono); font-size: 13px; }
+  footer { margin-top: 32px; color: var(--muted); font-size: 12px; }
+  @media (max-width: 640px) {
+    .tiles { grid-template-columns: repeat(3, 1fr); }
+    details.f > summary { grid-template-columns: auto 1fr; }
+    .fid { display: none; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <h1>Cloud Misconfiguration Report</h1>
+  <div class="meta">
+    {{ r.scan.provider | upper }} account <code>{{ r.scan.account }}</code>
+    &middot; regions <code>{{ r.scan.regions | join(", ") }}</code>
+    &middot; scanned {{ r.scan.scanned_at }} &middot; {{ r.tool.name }} {{ r.tool.version }}
+  </div>
+
+  <div class="tiles">
+    {% for sev, n in r.scan.counts.items() %}
+    <div class="tile {{ sev }}"><div class="n">{{ n }}</div><div class="l">{{ sev | lower }}</div></div>
+    {% endfor %}
+  </div>
+
+  {% if r.ai_summary %}
+  {% set ai = r.ai_summary %}
+  <section class="card">
+    <div class="ai-head">
+      <h2>Triage summary</h2>
+      <span class="pill {{ ai.overall_risk }}">overall {{ ai.overall_risk }}</span>
+      {% if ai.status == "ok" %}
+      <span class="pill ok">AI &middot; {{ ai.provider }} &middot; {{ ai.model }}</span>
+      {% elif ai.status == "fallback" %}
+      <span class="pill src">rules (AI fallback)</span>
+      {% else %}
+      <span class="pill src">rules only</span>
+      {% endif %}
+    </div>
+    <p>{{ ai.executive_summary }}</p>
+    {% if ai.note %}<div class="warn">{{ ai.note }}. The deterministic summary is shown instead.</div>{% endif %}
+
+    {% if ai.top_risks %}
+    <ol class="top">
+      {% for t in ai.top_risks %}
+      {% set f = by_id.get(t.finding_id) %}
+      <li>
+        <a href="#{{ t.finding_id }}">{{ f.title if f else t.finding_id }}</a>
+        {% if f %}<span class="fres">{{ f.resource_id }}</span>{% endif %}
+        <div class="why">{{ t.why_it_matters }}</div>
+        <div><strong>First step:</strong> {{ t.first_fix_step }}</div>
+      </li>
+      {% endfor %}
+    </ol>
+    {% endif %}
+
+    {% if ai.suspicious_input %}
+    <div class="warn">
+      <strong>Possible prompt injection in resource metadata.</strong>
+      These resources contain text that reads like instructions to an AI. It was treated as data.
+      Find out who wrote it:
+      {% for fid in ai.suspicious_input %}<a href="#{{ fid }}">{{ fid }}</a>{% if not loop.last %}, {% endif %}{% endfor %}
+    </div>
+    {% endif %}
+    <div class="advisory">Advisory only. Every finding below comes from deterministic checks; the AI ranks and explains them and cannot add, remove or downgrade them.</div>
+  </section>
+  {% endif %}
+
+  {% if r.scan.checks_not_run %}
+  <section class="card">
+    <h2>Checks that could not run</h2>
+    <p class="meta">No findings from these checks does not mean secure. Usually a missing read permission.</p>
+    <ul class="err">{% for e in r.scan.checks_not_run %}<li>{{ e }}</li>{% endfor %}</ul>
+  </section>
+  {% endif %}
+
+  <section style="margin-top:28px">
+    <h2>Findings ({{ r.scan.total }})</h2>
+    {% for f in r.findings %}
+    <details class="f" id="{{ f.id }}">
+      <summary>
+        <span class="pill {{ f.severity }}">{{ f.severity }}</span>
+        <span><span class="ftitle">{{ f.title }}</span><br><span class="fres">{{ f.resource_type }} &middot; {{ f.resource_id }} &middot; {{ f.region }}</span></span>
+        <span class="fid">{{ f.check_id }} &middot; {{ f.id }}</span>
+      </summary>
+      <div class="fbody">
+        <h3>Evidence</h3>
+        <pre>{{ f.evidence | tojson(indent=2) }}</pre>
+        <h3>Remediation</h3>
+        <p>{{ f.remediation }}</p>
+        {% if f.references %}
+        <h3>Reference</h3>
+        {% for ref in f.references %}<div><a href="{{ ref }}" rel="noopener noreferrer">{{ ref }}</a></div>{% endfor %}
+        {% endif %}
+      </div>
+    </details>
+    {% else %}
+    <div class="card">No findings.</div>
+    {% endfor %}
+  </section>
+
+  <footer>Generated by {{ r.tool.name }} {{ r.tool.version }}. Read-only scan; nothing in the account was changed.</footer>
+</main>
+</body>
+</html>

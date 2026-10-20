@@ -1,0 +1,49 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cloudscan"
+version = "0.1.0"
+description = "Read-only cloud misconfiguration scanner with an AI triage summary hardened against prompt injection."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+dependencies = [
+  "boto3>=1.34",
+  "jinja2>=3.1",
+]
+
+[project.optional-dependencies]
+ai = ["anthropic>=0.40"]
+dev = [
+  "pytest>=8",
+  "moto[s3,iam,ec2,sts]>=5",
+  "ruff==0.16.8",
+  "anthropic>=0.40",
+]
+
+[project.scripts]
+cloudscan = "cloudscan.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+cloudscan = ["templates/*.j2"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "S"]
+ignore = ["S101"]  # asserts are fine in tests
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S105", "S106"]  # fake credentials for mocked AWS
+"demo/*" = ["S105", "S106"]
